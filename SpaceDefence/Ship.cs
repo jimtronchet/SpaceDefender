@@ -17,6 +17,8 @@ namespace SpaceDefence
         private RectangleCollider _rectangleCollider;
         private Point target;
         private float speed = 250f;
+        private float shipRotation = 0f;
+        private Vector2 lastMovementDirection = Vector2.Zero;
 
         /// <summary>
         /// The player character
@@ -59,6 +61,8 @@ namespace SpaceDefence
             if (movement != Vector2.Zero)
             {
                 movement.Normalize();
+                lastMovementDirection = movement;
+                shipRotation = LinePieceCollider.GetAngle(movement);
                 _rectangleCollider.shape.Location += (movement * speed * (float)GameManager.GetGameManager().Game.TargetElapsedTime.TotalSeconds).ToPoint();
 
                 // Clamp position to screen bounds
@@ -95,7 +99,10 @@ namespace SpaceDefence
 
         public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
         {
-            spriteBatch.Draw(ship_body, _rectangleCollider.shape, Color.White);
+            Vector2 shipCenter = _rectangleCollider.shape.Center.ToVector2();
+            Vector2 shipOrigin = ship_body.Bounds.Size.ToVector2() / 2f;
+            spriteBatch.Draw(ship_body, shipCenter, null, Color.White, shipRotation, shipOrigin, 1f, SpriteEffects.None, 0);
+
             float aimAngle = LinePieceCollider.GetAngle(LinePieceCollider.GetDirection(GetPosition().Center, target));
             if (buffTimer <= 0)
             {
