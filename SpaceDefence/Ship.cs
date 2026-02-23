@@ -84,9 +84,13 @@ namespace SpaceDefence
             target = inputManager.CurrentMouseState.Position;
             if (inputManager.LeftMousePress())
             {
-
+                Vector2 shipCenter = _rectangleCollider.shape.Center.ToVector2();
                 Vector2 aimDirection = LinePieceCollider.GetDirection(GetPosition().Center, target);
-                Vector2 turretExit = _rectangleCollider.shape.Center.ToVector2() + aimDirection * base_turret.Height / 2f;
+                Vector2 turretOrigin = base_turret.Bounds.Size.ToVector2() / 2f;
+
+                // turret tip in world space: from ship center move along aim direction by half the turret height
+                Vector2 turretExit = shipCenter + aimDirection * (turretOrigin.Y);
+
                 if (buffTimer <= 0)
                 {
                     GameManager.GetGameManager().AddGameObject(new Bullet(turretExit, aimDirection, 150));
@@ -114,17 +118,15 @@ namespace SpaceDefence
             spriteBatch.Draw(ship_body, shipCenter, null, Color.White, shipRotation, shipOrigin, 1f, SpriteEffects.None, 0);
 
             float aimAngle = LinePieceCollider.GetAngle(LinePieceCollider.GetDirection(GetPosition().Center, target));
+            Vector2 turretOrigin = base_turret.Bounds.Size.ToVector2() / 2f;
             if (buffTimer <= 0)
             {
-                Rectangle turretLocation = base_turret.Bounds;
-                turretLocation.Location = _rectangleCollider.shape.Center;
-                spriteBatch.Draw(base_turret, turretLocation, null, Color.White, aimAngle, turretLocation.Size.ToVector2() / 2f, SpriteEffects.None, 0);
+                // Draw the turret centered on the ship so rotation keeps it attached
+                spriteBatch.Draw(base_turret, shipCenter, null, Color.White, aimAngle, turretOrigin, 1f, SpriteEffects.None, 0);
             }
             else
             {
-                Rectangle turretLocation = laser_turret.Bounds;
-                turretLocation.Location = _rectangleCollider.shape.Center;
-                spriteBatch.Draw(laser_turret, turretLocation, null, Color.White, aimAngle, turretLocation.Size.ToVector2() / 2f, SpriteEffects.None, 0);
+                spriteBatch.Draw(laser_turret, shipCenter, null, Color.White, aimAngle, turretOrigin, 1f, SpriteEffects.None, 0);
             }
             base.Draw(gameTime, spriteBatch);
         }
