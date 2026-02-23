@@ -19,6 +19,7 @@ namespace SpaceDefence
         private float speed = 250f;
         private float shipRotation = 0f;
         private Vector2 lastMovementDirection = Vector2.Zero;
+        private Vector2 positionFloat = Vector2.Zero;
 
         /// <summary>
         /// The player character
@@ -38,6 +39,7 @@ namespace SpaceDefence
             laser_turret = content.Load<Texture2D>("laser_turret");
             _rectangleCollider.shape.Size = ship_body.Bounds.Size;
             _rectangleCollider.shape.Location -= new Point(ship_body.Width / 2, ship_body.Height / 2);
+            positionFloat = _rectangleCollider.shape.Center.ToVector2();
             base.Load(content);
         }
 
@@ -63,12 +65,20 @@ namespace SpaceDefence
                 movement.Normalize();
                 lastMovementDirection = movement;
                 shipRotation = LinePieceCollider.GetAngle(movement);
-                _rectangleCollider.shape.Location += (movement * speed * (float)GameManager.GetGameManager().Game.TargetElapsedTime.TotalSeconds).ToPoint();
 
-                // Clamp position to screen bounds
+                // Use a float position accumulator to avoid integer truncation causing slower diagonal movement
+                float delta = (float)GameManager.GetGameManager().Game.TargetElapsedTime.TotalSeconds;
+                Vector2 displacement = movement * speed * delta;
+                positionFloat += displacement;
+
+                // Clamp position using ship center and half-size
                 var viewport = GameManager.GetGameManager().Game.GraphicsDevice.Viewport;
-                _rectangleCollider.shape.X = Math.Max(0, Math.Min(_rectangleCollider.shape.X, viewport.Width - _rectangleCollider.shape.Width));
-                _rectangleCollider.shape.Y = Math.Max(0, Math.Min(_rectangleCollider.shape.Y, viewport.Height - _rectangleCollider.shape.Height));
+                Vector2 halfSize = _rectangleCollider.shape.Size.ToVector2() / 2f;
+                positionFloat.X = Math.Max(halfSize.X, Math.Min(positionFloat.X, viewport.Width - halfSize.X));
+                positionFloat.Y = Math.Max(halfSize.Y, Math.Min(positionFloat.Y, viewport.Height - halfSize.Y));
+
+                // Sync collider location to the rounded position
+                _rectangleCollider.shape.Location = (positionFloat - halfSize).ToPoint();
             }
 
             target = inputManager.CurrentMouseState.Position;
