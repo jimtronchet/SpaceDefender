@@ -20,6 +20,7 @@ namespace SpaceDefence
         private float shipRotation = 0f;
         private Vector2 lastMovementDirection = Vector2.Zero;
         private Vector2 positionFloat = Vector2.Zero;
+        private float turretRotation = 0f;
 
         /// <summary>
         /// The player character
@@ -82,10 +83,12 @@ namespace SpaceDefence
             }
 
             target = inputManager.CurrentMouseState.Position;
+            Vector2 shipCenter = _rectangleCollider.shape.Center.ToVector2();
+            Vector2 aimDirection = LinePieceCollider.GetDirection(GetPosition().Center, target);
+            turretRotation = LinePieceCollider.GetAngle(aimDirection);
+
             if (inputManager.LeftMousePress())
             {
-                Vector2 shipCenter = _rectangleCollider.shape.Center.ToVector2();
-                Vector2 aimDirection = LinePieceCollider.GetDirection(GetPosition().Center, target);
                 Vector2 turretOrigin = base_turret.Bounds.Size.ToVector2() / 2f;
 
                 // turret tip in world space: from ship center move along aim direction by half the turret height
@@ -97,7 +100,9 @@ namespace SpaceDefence
                 }
                 else
                 {
-                    GameManager.GetGameManager().AddGameObject(new Laser(new LinePieceCollider(turretExit, target.ToVector2()), 400));
+                    // Fire in turret local space and resolve to world space via the ship turret transform.
+                    Vector2 localMuzzleOffset = new Vector2(0f, -turretOrigin.Y);
+                    GameManager.GetGameManager().AddGameObject(new Laser(this, localMuzzleOffset, -Vector2.UnitY, 400f));
                 }
             }
         }
@@ -117,16 +122,15 @@ namespace SpaceDefence
             Vector2 shipOrigin = ship_body.Bounds.Size.ToVector2() / 2f;
             spriteBatch.Draw(ship_body, shipCenter, null, Color.White, shipRotation, shipOrigin, 1f, SpriteEffects.None, 0);
 
-            float aimAngle = LinePieceCollider.GetAngle(LinePieceCollider.GetDirection(GetPosition().Center, target));
             Vector2 turretOrigin = base_turret.Bounds.Size.ToVector2() / 2f;
             if (buffTimer <= 0)
             {
                 // Draw the turret centered on the ship so rotation keeps it attached
-                spriteBatch.Draw(base_turret, shipCenter, null, Color.White, aimAngle, turretOrigin, 1f, SpriteEffects.None, 0);
+                spriteBatch.Draw(base_turret, shipCenter, null, Color.White, turretRotation, turretOrigin, 1f, SpriteEffects.None, 0);
             }
             else
             {
-                spriteBatch.Draw(laser_turret, shipCenter, null, Color.White, aimAngle, turretOrigin, 1f, SpriteEffects.None, 0);
+                spriteBatch.Draw(laser_turret, shipCenter, null, Color.White, turretRotation, turretOrigin, 1f, SpriteEffects.None, 0);
             }
             base.Draw(gameTime, spriteBatch);
         }
@@ -140,6 +144,16 @@ namespace SpaceDefence
         public Rectangle GetPosition()
         {
             return _rectangleCollider.shape;
+        }
+
+        public Vector2 GetTurretWorldPosition()
+        {
+            return _rectangleCollider.shape.Center.ToVector2();
+        }
+
+        public float GetTurretWorldRotation()
+        {
+            return turretRotation;
         }
     }
 }
