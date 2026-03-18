@@ -22,8 +22,8 @@ namespace SpaceDefence
         public Game Game { get; private set; }
         public Camera Camera { get; private set; }
         public Background Background { get; private set; }
+        public SpawnManager SpawnManager { get; private set; }
 
-        /// <summary>Invoked when an Alien reaches the player.</summary>
         public Action OnGameOver;
 
         public static GameManager GetGameManager()
@@ -41,6 +41,7 @@ namespace SpaceDefence
             InputManager = new InputManager();
             RNG = new Random();
             Background = new Background();
+            SpawnManager = new SpawnManager();
         }
 
         public void Initialize(ContentManager content, Game game, Ship player)
@@ -87,6 +88,9 @@ namespace SpaceDefence
 
             CheckCollision();
 
+            // Ramp up difficulty over time
+            SpawnManager.Update(gameTime);
+
             foreach (GameObject go in _toBeAdded)
             {
                 go.Load(_content);
@@ -101,21 +105,16 @@ namespace SpaceDefence
             }
             _toBeRemoved.Clear();
 
-            // Keep camera centred on the player
             if (Player != null)
                 Camera.Follow(Player.GetPosition().Center.ToVector2());
         }
 
         public void Draw(GameTime gameTime, SpriteBatch spriteBatch)
         {
-            // Draw background + all game objects using the camera transform
             spriteBatch.Begin(transformMatrix: Camera.GetTransform());
-
             Background.Draw(spriteBatch, Camera);
-
             foreach (GameObject go in _gameObjects)
                 go.Draw(gameTime, spriteBatch);
-
             spriteBatch.End();
         }
 
@@ -132,9 +131,6 @@ namespace SpaceDefence
 
         public void GameOver() => OnGameOver?.Invoke();
 
-        /// <summary>
-        /// Random location anywhere in the expanded world (not just the viewport).
-        /// </summary>
         public Vector2 RandomScreenLocation()
         {
             return new Vector2(

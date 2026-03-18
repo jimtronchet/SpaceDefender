@@ -30,8 +30,6 @@ namespace SpaceDefence
         {
             _gameManager = GameManager.GetGameManager();
 
-            // All screens must exist before base.Initialize() because
-            // MonoGame calls LoadContent() from inside base.Initialize().
             _startScreen = new StartScreen(GraphicsDevice, onStart: StartGame, onQuit: Exit);
             _pauseScreen = new PauseScreen(GraphicsDevice, onContinue: () => { }, onQuit: Exit);
             _gameOverScreen = new GameOverScreen(GraphicsDevice, onRespawn: RestartGame);
@@ -43,13 +41,23 @@ namespace SpaceDefence
 
         private void StartGame()
         {
+            // Reset static counters for a fresh game
+            Asteroid.ActiveCount = 0;
+            Alien.ResetSpeed();
+            _gameManager.SpawnManager.Reset();
+
             Ship player = new Ship(new Point(
                 GraphicsDevice.Viewport.Width / 2,
                 GraphicsDevice.Viewport.Height / 2));
 
             _gameManager.Initialize(Content, this, player);
             _gameManager.AddGameObject(player);
+
+            // Starting enemies: 2 aliens, 2 asteroids
             _gameManager.AddGameObject(new Alien());
+            _gameManager.AddGameObject(new Alien());
+            _gameManager.AddGameObject(new Asteroid());
+            _gameManager.AddGameObject(new Asteroid());
             _gameManager.AddGameObject(new Supply());
         }
 
@@ -67,7 +75,6 @@ namespace SpaceDefence
             SpriteFont fontLarge = Content.Load<SpriteFont>("YouDiedLarge");
             SpriteFont fontSmall = Content.Load<SpriteFont>("YouDiedSmall");
 
-            // Start and pause only need the small font
             _startScreen.SetFonts(fontSmall);
             _pauseScreen.SetFonts(fontSmall);
             _gameOverScreen.SetFonts(fontLarge, fontSmall);
@@ -80,7 +87,6 @@ namespace SpaceDefence
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed)
                 Exit();
 
-            // Start screen blocks everything else
             if (_startScreen.IsActive)
             {
                 _startScreen.Update(gameTime);
@@ -89,7 +95,6 @@ namespace SpaceDefence
                 return;
             }
 
-            // Game over blocks everything else
             if (_gameOverScreen.IsActive)
             {
                 _gameOverScreen.Update(gameTime);
@@ -98,14 +103,10 @@ namespace SpaceDefence
                 return;
             }
 
-            // Escape toggles pause (single press — only when not on another screen)
             if (keys.IsKeyDown(Keys.Escape) && !_prevKeys.IsKeyDown(Keys.Escape)
                 && !_pauseScreen.IsActive)
-            {
                 _pauseScreen.Toggle();
-            }
 
-            // Pause: world is drawn but not updated (handled in Draw)
             if (_pauseScreen.IsActive)
             {
                 _pauseScreen.Update(gameTime);
@@ -114,7 +115,6 @@ namespace SpaceDefence
                 return;
             }
 
-            // Normal gameplay
             _gameManager.Update(gameTime);
 
             _prevKeys = keys;
@@ -125,11 +125,9 @@ namespace SpaceDefence
         {
             GraphicsDevice.Clear(Color.Black);
 
-            // Draw the game world whenever the start screen is not showing
             if (!_startScreen.IsActive)
                 _gameManager.Draw(gameTime, _spriteBatch);
 
-            // Overlays on top (each checks IsActive internally)
             _startScreen.Draw(gameTime);
             _pauseScreen.Draw(gameTime);
             _gameOverScreen.Draw(gameTime);
