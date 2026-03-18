@@ -24,6 +24,9 @@ namespace SpaceDefence
 
         public override void OnCollision(GameObject other)
         {
+            if (!(other is Ship))
+                return; // Don't do anything if it's not the player ship that collided with the supply crate
+
             RandomMove();
             GameManager.GetGameManager().Player.Buff();
             base.OnCollision(other);
