@@ -97,3 +97,16 @@
 /processorParam:TextureFormat=Color
 /build:ship_body.png
 
+#begin palatinolinotype_roman.ttf
+/importer:FontDescriptionImporter
+/processor:FontDescriptionProcessor
+/processorParam:PremultiplyAlpha=True
+/processorParam:TextureFormat=Compressed
+/build:YouDiedLarge.spritefont
+
+#begin palatinolinotype_roman.ttf
+/importer:FontDescriptionImporter
+/processor:FontDescriptionProcessor
+/processorParam:PremultiplyAlpha=True
+/processorParam:TextureFormat=Compressed
+/build:YouDiedSmall.spritefont

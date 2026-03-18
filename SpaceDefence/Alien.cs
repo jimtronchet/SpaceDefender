@@ -8,11 +8,19 @@ namespace SpaceDefence
     {
         private CircleCollider _circleCollider;
         private Texture2D _texture;
-        private float playerClearance = 100;
 
-        public Alien() 
+        private const float KillRange = 60f; // Radius at which alien kills the player;
+
+        private const float PlayerClearance = 100f; // Make sure aliens don't spawn too close to the player
+
+        private static float _baseSpeed = 80f; // Increased each time an alien is killeds
+        private const float SpeedIncrement = 20f;
+
+        private float _chaseSpeed; // This alien's speeds
+
+        public Alien()
         {
-            
+            _chaseSpeed = _baseSpeed;
         }
 
         public override void Load(ContentManager content)
@@ -24,20 +32,50 @@ namespace SpaceDefence
             RandomMove();
         }
 
+        public override void Update(GameTime gameTime)
+        {
+            GameManager gm = GameManager.GetGameManager();
+            Vector2 playerCenter = gm.Player.GetPosition().Center.ToVector2();
+            Vector2 toPlayer = playerCenter - _circleCollider.Center;
+            float distance = toPlayer.Length();
+
+            if (distance <= KillRange)
+            {
+                gm.GameOver();
+                return;
+            }
+
+            float delta = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            _circleCollider.Center += (toPlayer / distance) * _chaseSpeed * delta;
+
+            base.Update(gameTime);
+        }
+
         public override void OnCollision(GameObject other)
         {
-            RandomMove();
+            // Ignore the player — only bullets/other objects kill an alien
+            if (other is Ship)
+                return;
+
+            // Speed up the next alien and spawn it before removing self
+            _baseSpeed += SpeedIncrement;
+            GameManager gm = GameManager.GetGameManager();
+            gm.AddGameObject(new Alien());
+            gm.RemoveGameObject(this);
+
             base.OnCollision(other);
         }
 
         public void RandomMove()
         {
             GameManager gm = GameManager.GetGameManager();
-            _circleCollider.Center = gm.RandomScreenLocation();
+            Vector2 playerCenter = gm.Player.GetPosition().Center.ToVector2();
 
-            Vector2 centerOfPlayer = gm.Player.GetPosition().Center.ToVector2();
-            while ((_circleCollider.Center - centerOfPlayer).Length() < playerClearance)
+            do
+            {
                 _circleCollider.Center = gm.RandomScreenLocation();
+            }
+            while ((_circleCollider.Center - playerCenter).Length() < PlayerClearance);
         }
 
         public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
@@ -46,6 +84,9 @@ namespace SpaceDefence
             base.Draw(gameTime, spriteBatch);
         }
 
-
+        public static void ResetSpeed()
+        {
+            _baseSpeed = 80f;
+        }
     }
 }
