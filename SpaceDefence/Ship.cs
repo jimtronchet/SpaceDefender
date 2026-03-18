@@ -9,23 +9,18 @@ namespace SpaceDefence
 {
     public class Ship : GameObject
     {
-        private Texture2D ship_body;
-        private Texture2D base_turret;
-        private Texture2D laser_turret;
-        private float buffTimer = 0f;
-        private float buffDuration = 10f;
+        private Texture2D _ship_body;
+        private Texture2D _base_turret;
+        private Texture2D _laser_turret;
+        private float _buffTimer = 0f;
+        private float _buffDuration = 10f;
         private RectangleCollider _rectangleCollider;
-        private Point target;
-        private float acceleration = 250f;
-        private float shipRotation = 0f;
-        private Vector2 velocity = Vector2.Zero;
-        private Vector2 positionFloat = Vector2.Zero;
-        private float turretRotation = 0f;
+        private float _acceleration = 250f;
+        private float _shipRotation = 0f;
+        private Vector2 _velocity = Vector2.Zero;
+        private Vector2 _positionFloat = Vector2.Zero;
+        private float _turretRotation = 0f;
 
-        /// <summary>
-        /// The player character
-        /// </summary>
-        /// <param name="Position">The ship's starting position</param>
         public Ship(Point Position)
         {
             _rectangleCollider = new RectangleCollider(new Rectangle(Position, Point.Zero));
@@ -34,13 +29,12 @@ namespace SpaceDefence
 
         public override void Load(ContentManager content)
         {
-            // Ship sprites from: https://zintoki.itch.io/space-breaker
-            ship_body = content.Load<Texture2D>("ship_body");
-            base_turret = content.Load<Texture2D>("base_turret");
-            laser_turret = content.Load<Texture2D>("laser_turret");
-            _rectangleCollider.shape.Size = ship_body.Bounds.Size;
-            _rectangleCollider.shape.Location -= new Point(ship_body.Width / 2, ship_body.Height / 2);
-            positionFloat = _rectangleCollider.shape.Center.ToVector2();
+            _ship_body = content.Load<Texture2D>("ship_body");
+            _base_turret = content.Load<Texture2D>("base_turret");
+            _laser_turret = content.Load<Texture2D>("laser_turret");
+            _rectangleCollider.shape.Size = _ship_body.Bounds.Size;
+            _rectangleCollider.shape.Location -= new Point(_ship_body.Width / 2, _ship_body.Height / 2);
+            _positionFloat = _rectangleCollider.shape.Center.ToVector2();
             base.Load(content);
         }
 
@@ -50,130 +44,92 @@ namespace SpaceDefence
 
             float delta = (float)GameManager.GetGameManager().Game.TargetElapsedTime.TotalSeconds;
 
-            // Build raw input direction from WASD
+            // ── Movement ──────────────────────────────────────────────────────
             Vector2 inputDirection = Vector2.Zero;
-            if (inputManager.IsKeyDown(Keys.W))
-                inputDirection.Y -= 1;
-            if (inputManager.IsKeyDown(Keys.S))
-                inputDirection.Y += 1;
-            if (inputManager.IsKeyDown(Keys.A))
-                inputDirection.X -= 1;
-            if (inputManager.IsKeyDown(Keys.D))
-                inputDirection.X += 1;
+            if (inputManager.IsKeyDown(Keys.W)) inputDirection.Y -= 1;
+            if (inputManager.IsKeyDown(Keys.S)) inputDirection.Y += 1;
+            if (inputManager.IsKeyDown(Keys.A)) inputDirection.X -= 1;
+            if (inputManager.IsKeyDown(Keys.D)) inputDirection.X += 1;
 
-
-            // We are moving
             if (inputDirection != Vector2.Zero)
             {
                 inputDirection.Normalize();
-
-                // Accelerate: add to velocity each frame proportional to delta time
-                velocity += inputDirection * acceleration * delta;
-
-                // Rotate ship to face the direction of the last acceleration input
-                shipRotation = LinePieceCollider.GetAngle(inputDirection);
+                _velocity += inputDirection * _acceleration * delta;
+                _shipRotation = LinePieceCollider.GetAngle(inputDirection);
             }
 
-            // Apply velocity to position
-            positionFloat += velocity * delta;
+            _positionFloat += _velocity * delta;
 
-            // Clamp position to viewport and zero out velocity component on collision with border
-            var viewport = GameManager.GetGameManager().Game.GraphicsDevice.Viewport;
+            // Clamp to WORLD bounds (not viewport)
             Vector2 halfSize = _rectangleCollider.shape.Size.ToVector2() / 2f;
 
-            if (positionFloat.X < halfSize.X)
-            {
-                positionFloat.X = halfSize.X;
-                if (velocity.X < 0) velocity.X = 0;
-            }
-            else if (positionFloat.X > viewport.Width - halfSize.X)
-            {
-                positionFloat.X = viewport.Width - halfSize.X;
-                if (velocity.X > 0) velocity.X = 0;
-            }
+            if (_positionFloat.X < halfSize.X)
+            { _positionFloat.X = halfSize.X; if (_velocity.X < 0) _velocity.X = 0; }
+            else if (_positionFloat.X > Camera.WorldWidth - halfSize.X)
+            { _positionFloat.X = Camera.WorldWidth - halfSize.X; if (_velocity.X > 0) _velocity.X = 0; }
 
-            if (positionFloat.Y < halfSize.Y)
-            {
-                positionFloat.Y = halfSize.Y;
-                if (velocity.Y < 0) velocity.Y = 0;
-            }
-            else if (positionFloat.Y > viewport.Height - halfSize.Y)
-            {
-                positionFloat.Y = viewport.Height - halfSize.Y;
-                if (velocity.Y > 0) velocity.Y = 0;
-            }
+            if (_positionFloat.Y < halfSize.Y)
+            { _positionFloat.Y = halfSize.Y; if (_velocity.Y < 0) _velocity.Y = 0; }
+            else if (_positionFloat.Y > Camera.WorldHeight - halfSize.Y)
+            { _positionFloat.Y = Camera.WorldHeight - halfSize.Y; if (_velocity.Y > 0) _velocity.Y = 0; }
 
-            // Sync collider to the float position
-            _rectangleCollider.shape.Location = (positionFloat - halfSize).ToPoint();
+            _rectangleCollider.shape.Location = (_positionFloat - halfSize).ToPoint();
 
-            // Turret always aims at mouse cursor
-            target = inputManager.CurrentMouseState.Position;
+            // ── Turret aiming ─────────────────────────────────────────────────
+            // Mouse reports screen coords — convert to world coords for correct aiming
+            Camera camera = GameManager.GetGameManager().Camera;
+            Vector2 mouseWorld = camera.ScreenToWorld(
+                inputManager.CurrentMouseState.Position.ToVector2());
+
             Vector2 shipCenter = _rectangleCollider.shape.Center.ToVector2();
-            Vector2 aimDirection = LinePieceCollider.GetDirection(GetPosition().Center, target);
-            turretRotation = LinePieceCollider.GetAngle(aimDirection);
+            Vector2 aimDirection = LinePieceCollider.GetDirection(shipCenter, mouseWorld);
+            _turretRotation = LinePieceCollider.GetAngle(aimDirection);
 
+            // ── Shooting ──────────────────────────────────────────────────────
             if (inputManager.LeftMousePress())
             {
-                Vector2 turretOrigin = base_turret.Bounds.Size.ToVector2() / 2f;
-                Vector2 turretExit = shipCenter + aimDirection * (turretOrigin.Y);
+                Vector2 turretOrigin = _base_turret.Bounds.Size.ToVector2() / 2f;
+                Vector2 turretExit = shipCenter + aimDirection * turretOrigin.Y;
 
-                if (buffTimer <= 0)
+                if (_buffTimer <= 0)
                 {
                     GameManager.GetGameManager().AddGameObject(new Bullet(turretExit, aimDirection, 150));
                 }
                 else
                 {
                     Vector2 localMuzzleOffset = new Vector2(0f, -turretOrigin.Y);
-                    GameManager.GetGameManager().AddGameObject(new Laser(this, localMuzzleOffset, -Vector2.UnitY, 400f));
+                    GameManager.GetGameManager().AddGameObject(
+                        new Laser(this, localMuzzleOffset, -Vector2.UnitY, 400f));
                 }
             }
         }
 
         public override void Update(GameTime gameTime)
         {
-            // Update the Buff timer
-            if (buffTimer > 0)
-                buffTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
-
+            if (_buffTimer > 0)
+                _buffTimer -= (float)gameTime.ElapsedGameTime.TotalSeconds;
             base.Update(gameTime);
         }
 
         public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
         {
             Vector2 shipCenter = _rectangleCollider.shape.Center.ToVector2();
-            Vector2 shipOrigin = ship_body.Bounds.Size.ToVector2() / 2f;
-            spriteBatch.Draw(ship_body, shipCenter, null, Color.White, shipRotation, shipOrigin, 1f, SpriteEffects.None, 0);
+            Vector2 shipOrigin = _ship_body.Bounds.Size.ToVector2() / 2f;
+            spriteBatch.Draw(_ship_body, shipCenter, null, Color.White,
+                             _shipRotation, shipOrigin, 1f, SpriteEffects.None, 0);
 
-            Vector2 turretOrigin = base_turret.Bounds.Size.ToVector2() / 2f;
-            if (buffTimer <= 0)
-            {
-                spriteBatch.Draw(base_turret, shipCenter, null, Color.White, turretRotation, turretOrigin, 1f, SpriteEffects.None, 0);
-            }
-            else
-            {
-                spriteBatch.Draw(laser_turret, shipCenter, null, Color.White, turretRotation, turretOrigin, 1f, SpriteEffects.None, 0);
-            }
+            Vector2 turretOrigin = _base_turret.Bounds.Size.ToVector2() / 2f;
+            Texture2D turret = _buffTimer > 0 ? _laser_turret : _base_turret;
+            spriteBatch.Draw(turret, shipCenter, null, Color.White,
+                             _turretRotation, turretOrigin, 1f, SpriteEffects.None, 0);
+
             base.Draw(gameTime, spriteBatch);
         }
 
-        public void Buff()
-        {
-            buffTimer = buffDuration;
-        }
+        public void Buff() => _buffTimer = _buffDuration;
 
-        public Rectangle GetPosition()
-        {
-            return _rectangleCollider.shape;
-        }
-
-        public Vector2 GetTurretWorldPosition()
-        {
-            return _rectangleCollider.shape.Center.ToVector2();
-        }
-
-        public float GetTurretWorldRotation()
-        {
-            return turretRotation;
-        }
+        public Rectangle GetPosition() => _rectangleCollider.shape;
+        public Vector2 GetTurretWorldPosition() => _rectangleCollider.shape.Center.ToVector2();
+        public float GetTurretWorldRotation() => _turretRotation;
     }
 }

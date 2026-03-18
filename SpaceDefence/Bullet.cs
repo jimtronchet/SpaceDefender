@@ -29,17 +29,22 @@ namespace SpaceDefence
         {
             base.Update(gameTime);
             _circleCollider.Center += _velocity * (float)gameTime.ElapsedGameTime.TotalSeconds;
-            if (!GameManager.GetGameManager().Game.GraphicsDevice.Viewport.Bounds.Contains(_circleCollider.Center))
-                 GameManager.GetGameManager().RemoveGameObject(this);
 
+            // Remove the bullet when it leaves the world bounds (not just the viewport)
+            bool outsideWorld =
+                _circleCollider.Center.X < 0 ||
+                _circleCollider.Center.Y < 0 ||
+                _circleCollider.Center.X > Camera.WorldWidth ||
+                _circleCollider.Center.Y > Camera.WorldHeight;
+
+            if (outsideWorld)
+                GameManager.GetGameManager().RemoveGameObject(this);
         }
 
         public override void OnCollision(GameObject other)
         {
             if (other is Alien || other is Supply)
-            {
                 GameManager.GetGameManager().RemoveGameObject(this);
-            }
         }
 
         public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)

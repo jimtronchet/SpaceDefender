@@ -20,6 +20,10 @@ namespace SpaceDefence
         public Ship Player { get; private set; }
         public InputManager InputManager { get; private set; }
         public Game Game { get; private set; }
+        public Camera Camera { get; private set; }
+        public Background Background { get; private set; }
+
+        /// <summary>Invoked when an Alien reaches the player.</summary>
         public Action OnGameOver;
 
         public static GameManager GetGameManager()
@@ -36,6 +40,7 @@ namespace SpaceDefence
             _toBeAdded = new List<GameObject>();
             InputManager = new InputManager();
             RNG = new Random();
+            Background = new Background();
         }
 
         public void Initialize(ContentManager content, Game game, Ship player)
@@ -43,24 +48,25 @@ namespace SpaceDefence
             Game = game;
             _content = content;
             Player = player;
+            Camera = new Camera(game.GraphicsDevice.Viewport);
         }
 
         public void Load(ContentManager content)
         {
-            foreach (GameObject gameObject in _gameObjects)
-                gameObject.Load(content);
+            Background.Load(content);
+            foreach (GameObject go in _gameObjects)
+                go.Load(content);
         }
 
         public void HandleInput(InputManager inputManager)
         {
-            foreach (GameObject gameObject in _gameObjects)
-                gameObject.HandleInput(this.InputManager);
+            foreach (GameObject go in _gameObjects)
+                go.HandleInput(this.InputManager);
         }
 
         public void CheckCollision()
         {
             for (int i = 0; i < _gameObjects.Count; i++)
-            {
                 for (int j = i + 1; j < _gameObjects.Count; j++)
                 {
                     if (_gameObjects[i].CheckCollision(_gameObjects[j]))
@@ -69,7 +75,6 @@ namespace SpaceDefence
                         _gameObjects[j].OnCollision(_gameObjects[i]);
                     }
                 }
-            }
         }
 
         public void Update(GameTime gameTime)
@@ -77,77 +82,64 @@ namespace SpaceDefence
             InputManager.Update();
             HandleInput(InputManager);
 
-            foreach (GameObject gameObject in _gameObjects)
-                gameObject.Update(gameTime);
+            foreach (GameObject go in _gameObjects)
+                go.Update(gameTime);
 
             CheckCollision();
 
-            foreach (GameObject gameObject in _toBeAdded)
+            foreach (GameObject go in _toBeAdded)
             {
-                gameObject.Load(_content);
-                _gameObjects.Add(gameObject);
+                go.Load(_content);
+                _gameObjects.Add(go);
             }
             _toBeAdded.Clear();
 
-            foreach (GameObject gameObject in _toBeRemoved)
+            foreach (GameObject go in _toBeRemoved)
             {
-                gameObject.Destroy();
-                _gameObjects.Remove(gameObject);
+                go.Destroy();
+                _gameObjects.Remove(go);
             }
             _toBeRemoved.Clear();
+
+            // Keep camera centred on the player
+            if (Player != null)
+                Camera.Follow(Player.GetPosition().Center.ToVector2());
         }
 
         public void Draw(GameTime gameTime, SpriteBatch spriteBatch)
         {
-            spriteBatch.Begin();
-            foreach (GameObject gameObject in _gameObjects)
-                gameObject.Draw(gameTime, spriteBatch);
+            // Draw background + all game objects using the camera transform
+            spriteBatch.Begin(transformMatrix: Camera.GetTransform());
+
+            Background.Draw(spriteBatch, Camera);
+
+            foreach (GameObject go in _gameObjects)
+                go.Draw(gameTime, spriteBatch);
+
             spriteBatch.End();
         }
 
-        /// <summary>
-        /// Add a new GameObject to the GameManager.
-        /// The GameObject will be added at the start of the next Update step.
-        /// Once it is added, the GameManager will ensure all steps of the game loop will be called on the object automatically.
-        /// </summary>
-        /// <param name="gameObject"> The GameObject to add. </param>
-        public void AddGameObject(GameObject gameObject)
-        {
-            _toBeAdded.Add(gameObject);
-        }
-        /// <summary>
-        /// Remove GameObject from the GameManager.
-        /// The GameObject will be removed at the start of the next Update step and its Destroy() mehtod will be called.
-        /// After that the object will no longer receive any updates.
-        /// </summary>
-        /// <param name="gameObject"> The GameObject to Remove. </param>
-        public void RemoveGameObject(GameObject gameObject)
-        {
-            _toBeRemoved.Add(gameObject);
-        }
+        public void AddGameObject(GameObject gameObject) => _toBeAdded.Add(gameObject);
+        public void RemoveGameObject(GameObject gameObject) => _toBeRemoved.Add(gameObject);
 
         public void ClearGameObjects()
         {
-            foreach (GameObject go in _gameObjects)
-                go.Destroy();
+            foreach (GameObject go in _gameObjects) go.Destroy();
             _gameObjects.Clear();
             _toBeAdded.Clear();
             _toBeRemoved.Clear();
         }
 
-        public void GameOver()
-        {
-            OnGameOver?.Invoke();
-        }
+        public void GameOver() => OnGameOver?.Invoke();
 
         /// <summary>
-        /// Get a random location on the screen.
+        /// Random location anywhere in the expanded world (not just the viewport).
         /// </summary>
         public Vector2 RandomScreenLocation()
         {
             return new Vector2(
-                RNG.Next(0, Game.GraphicsDevice.Viewport.Width),
-                RNG.Next(0, Game.GraphicsDevice.Viewport.Height));
+                RNG.Next(0, Camera.WorldWidth),
+                RNG.Next(0, Camera.WorldHeight));
         }
     }
 }
