@@ -71,6 +71,8 @@ namespace SpaceDefence
                 localStart.X * cos - localStart.Y * sin,
                 localStart.X * sin + localStart.Y * cos);
 
+
+            //  Rotate the local direction vector by the turret's rotation to get the world direction
             Vector2 rotatedLocalDirection = new Vector2(
                 localDirection.X * cos - localDirection.Y * sin,
                 localDirection.X * sin + localDirection.Y * cos);
@@ -78,6 +80,7 @@ namespace SpaceDefence
             if (rotatedLocalDirection != Vector2.Zero)
                 rotatedLocalDirection.Normalize();
 
+            // Set the line piece's start and end points based on the rotated local start and direction, and the turret's world position
             float length = linePiece.Length;
             linePiece.Start = parentTurret.GetTurretWorldPosition() + rotatedLocalStart;
             linePiece.End = linePiece.Start + rotatedLocalDirection * length;

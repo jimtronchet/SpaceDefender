@@ -4,12 +4,6 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace SpaceDefence
 {
-  /// <summary>
-  /// Draws the two-layer scrolling background:
-  ///   Layer 1 = void.png   tiled across the whole world, opaque base.
-  ///   Layer 2  = stars.png  tiled on top, semi-transparent overlay.
-  /// Both textures tile seamlessly to fill the world.
-  /// </summary>
   public class Background
   {
     private Texture2D _void;
@@ -21,9 +15,6 @@ namespace SpaceDefence
       _stars = content.Load<Texture2D>("stars");
     }
 
-    /// <summary>
-    /// Draws the background. Call this before drawing game objects.
-    /// </summary>
     public void Draw(SpriteBatch spriteBatch, Camera camera)
     {
       if (_void == null || _stars == null) return;
