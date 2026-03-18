@@ -44,7 +44,7 @@ namespace SpaceDefence
 
             float delta = (float)GameManager.GetGameManager().Game.TargetElapsedTime.TotalSeconds;
 
-            // ── Movement ──────────────────────────────────────────────────────
+            // Movement
             Vector2 inputDirection = Vector2.Zero;
             if (inputManager.IsKeyDown(Keys.W)) inputDirection.Y -= 1;
             if (inputManager.IsKeyDown(Keys.S)) inputDirection.Y += 1;
@@ -60,50 +60,36 @@ namespace SpaceDefence
 
             _positionFloat += _velocity * delta;
 
-            // Clamp to WORLD bounds (not viewport)
+            // Keep the ship inside the world
             Vector2 halfSize = _rectangleCollider.shape.Size.ToVector2() / 2f;
 
-            if (_positionFloat.X < halfSize.X)
-            { _positionFloat.X = halfSize.X; if (_velocity.X < 0) _velocity.X = 0; }
-            else if (_positionFloat.X > Camera.WorldWidth - halfSize.X)
-            { _positionFloat.X = Camera.WorldWidth - halfSize.X; if (_velocity.X > 0) _velocity.X = 0; }
+            _positionFloat.X = MathHelper.Clamp(_positionFloat.X, halfSize.X, Camera.WorldWidth - halfSize.X);
+            _positionFloat.Y = MathHelper.Clamp(_positionFloat.Y, halfSize.Y, Camera.WorldHeight - halfSize.Y);
 
-            if (_positionFloat.Y < halfSize.Y)
-            { _positionFloat.Y = halfSize.Y; if (_velocity.Y < 0) _velocity.Y = 0; }
-            else if (_positionFloat.Y > Camera.WorldHeight - halfSize.Y)
-            { _positionFloat.Y = Camera.WorldHeight - halfSize.Y; if (_velocity.Y > 0) _velocity.Y = 0; }
+            // Zero out velocity if we hit a wall
+            if (_positionFloat.X == halfSize.X || _positionFloat.X == Camera.WorldWidth - halfSize.X) _velocity.X = 0;
+            if (_positionFloat.Y == halfSize.Y || _positionFloat.Y == Camera.WorldHeight - halfSize.Y) _velocity.Y = 0;
 
             _rectangleCollider.shape.Location = (_positionFloat - halfSize).ToPoint();
 
-            // ── Turret aiming ─────────────────────────────────────────────────
-            // Mouse reports screen coords — convert to world coords for correct aiming
-            Camera camera = GameManager.GetGameManager().Camera;
-            Vector2 mouseWorld = camera.ScreenToWorld(
-                inputManager.CurrentMouseState.Position.ToVector2());
-
+            // Turret aiming - mouse position needs to be converted to world position
+            Vector2 mouseWorld = GameManager.GetGameManager().Camera.ScreenToWorld(inputManager.CurrentMouseState.Position.ToVector2());
             Vector2 shipCenter = _rectangleCollider.shape.Center.ToVector2();
             Vector2 aimDirection = LinePieceCollider.GetDirection(shipCenter, mouseWorld);
             _turretRotation = LinePieceCollider.GetAngle(aimDirection);
 
-            // ── Shooting ──────────────────────────────────────────────────────
+            // Shooting
             if (inputManager.LeftMousePress())
             {
                 Vector2 turretOrigin = _base_turret.Bounds.Size.ToVector2() / 2f;
                 Vector2 turretExit = shipCenter + aimDirection * turretOrigin.Y;
 
                 if (_buffTimer <= 0)
-                {
                     GameManager.GetGameManager().AddGameObject(new Bullet(turretExit, aimDirection, 150));
-                }
                 else
-                {
-                    Vector2 localMuzzleOffset = new Vector2(0f, -turretOrigin.Y);
-                    GameManager.GetGameManager().AddGameObject(
-                        new Laser(this, localMuzzleOffset, -Vector2.UnitY, 400f));
-                }
+                    GameManager.GetGameManager().AddGameObject(new Laser(this, new Vector2(0f, -turretOrigin.Y), -Vector2.UnitY, 400f));
             }
         }
-
         public override void Update(GameTime gameTime)
         {
             if (_buffTimer > 0)

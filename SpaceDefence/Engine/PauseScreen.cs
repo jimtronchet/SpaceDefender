@@ -66,7 +66,7 @@ namespace SpaceDefence
     {
       if (!IsActive) return;
 
-      // Count up the input delay — buttons and Escape are ignored until it expires
+      // Count up the input delay, buttons and Escape are ignored until it expires
       _inputDelay += (float)gameTime.ElapsedGameTime.TotalSeconds;
       if (_inputDelay < InputDelayTime) return;
 
@@ -104,7 +104,7 @@ namespace SpaceDefence
 
       _sb.Begin();
 
-      // Semi-transparent black overlay — game world stays visible behind it
+      // Semi-transparent black overlay, game world stays visible behind it
       _sb.Draw(_pixel, new Rectangle(0, 0, W, H), Color.Black * 0.65f);
 
       // Title

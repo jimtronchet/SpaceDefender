@@ -53,7 +53,7 @@ namespace SpaceDefence
 
         public override void OnCollision(GameObject other)
         {
-            // Ignore the player — only bullets/other objects kill an alien
+            // Ignore the player,  only bullets/other objects kill an alien
             if (other is Ship)
                 return;
 

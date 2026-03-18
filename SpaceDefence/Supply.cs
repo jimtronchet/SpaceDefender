@@ -33,8 +33,6 @@ namespace SpaceDefence
         {
             GameManager gm = GameManager.GetGameManager();
 
-            // RandomScreenLocation() already returns a position anywhere in the
-            // world, so Supply crates are spread across the full play area
             _rectangleCollider.shape.Location =
                 (gm.RandomScreenLocation() - _rectangleCollider.shape.Size.ToVector2() / 2).ToPoint();
 

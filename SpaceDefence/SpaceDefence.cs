@@ -53,7 +53,7 @@ namespace SpaceDefence
             _gameManager.Initialize(Content, this, player);
             _gameManager.AddGameObject(player);
 
-            // Starting enemies: 2 aliens, 2 asteroids
+            // Starting enemies: 2 aliens, 2 asteroids and 1 supply crate, all randomly placed
             _gameManager.AddGameObject(new Alien());
             _gameManager.AddGameObject(new Alien());
             _gameManager.AddGameObject(new Asteroid());
@@ -72,6 +72,8 @@ namespace SpaceDefence
             _spriteBatch = new SpriteBatch(GraphicsDevice);
             _gameManager.Load(Content);
 
+
+            // Load the same fonts for all screens, they can share them
             SpriteFont fontLarge = Content.Load<SpriteFont>("YouDiedLarge");
             SpriteFont fontSmall = Content.Load<SpriteFont>("YouDiedSmall");
 

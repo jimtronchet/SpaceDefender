@@ -39,3 +39,8 @@ A Dark Souls-style **"YOU DIED"** overlay appears when the player dies. It fades
 ### Background Parallax Layers
 
 Two tiled textures (`void.png` + `stars.png`) cover the full world with efficient viewport culling only the tiles currently visible are drawn each frame.
+
+### Laser following turret direction
+
+The laser is fired from the tip of the turret and travels in the direction the turret is currently pointing.
+It always follows the turret's rotation as the player aims with the mouse.
