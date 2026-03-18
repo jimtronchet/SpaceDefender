@@ -16,9 +16,9 @@ namespace SpaceDefence
         private float buffDuration = 10f;
         private RectangleCollider _rectangleCollider;
         private Point target;
-        private float speed = 250f;
+        private float acceleration = 250f;
         private float shipRotation = 0f;
-        private Vector2 lastMovementDirection = Vector2.Zero;
+        private Vector2 velocity = Vector2.Zero;
         private Vector2 positionFloat = Vector2.Zero;
         private float turretRotation = 0f;
 
@@ -44,44 +44,69 @@ namespace SpaceDefence
             base.Load(content);
         }
 
-
-
         public override void HandleInput(InputManager inputManager)
         {
             base.HandleInput(inputManager);
 
-            // WASD movement
-            Vector2 movement = Vector2.Zero;
+            float delta = (float)GameManager.GetGameManager().Game.TargetElapsedTime.TotalSeconds;
+
+            // Build raw input direction from WASD
+            Vector2 inputDirection = Vector2.Zero;
             if (inputManager.IsKeyDown(Keys.W))
-                movement.Y -= 1;
+                inputDirection.Y -= 1;
             if (inputManager.IsKeyDown(Keys.S))
-                movement.Y += 1;
+                inputDirection.Y += 1;
             if (inputManager.IsKeyDown(Keys.A))
-                movement.X -= 1;
+                inputDirection.X -= 1;
             if (inputManager.IsKeyDown(Keys.D))
-                movement.X += 1;
+                inputDirection.X += 1;
 
-            if (movement != Vector2.Zero)
+
+            // We are moving
+            if (inputDirection != Vector2.Zero)
             {
-                movement.Normalize();
-                lastMovementDirection = movement;
-                shipRotation = LinePieceCollider.GetAngle(movement);
+                inputDirection.Normalize();
 
-                // Use a float position accumulator to avoid integer truncation causing slower diagonal movement
-                float delta = (float)GameManager.GetGameManager().Game.TargetElapsedTime.TotalSeconds;
-                Vector2 displacement = movement * speed * delta;
-                positionFloat += displacement;
+                // Accelerate: add to velocity each frame proportional to delta time
+                velocity += inputDirection * acceleration * delta;
 
-                // Clamp position using ship center and half-size
-                var viewport = GameManager.GetGameManager().Game.GraphicsDevice.Viewport;
-                Vector2 halfSize = _rectangleCollider.shape.Size.ToVector2() / 2f;
-                positionFloat.X = Math.Max(halfSize.X, Math.Min(positionFloat.X, viewport.Width - halfSize.X));
-                positionFloat.Y = Math.Max(halfSize.Y, Math.Min(positionFloat.Y, viewport.Height - halfSize.Y));
-
-                // Sync collider location to the rounded position
-                _rectangleCollider.shape.Location = (positionFloat - halfSize).ToPoint();
+                // Rotate ship to face the direction of the last acceleration input
+                shipRotation = LinePieceCollider.GetAngle(inputDirection);
             }
 
+            // Apply velocity to position
+            positionFloat += velocity * delta;
+
+            // Clamp position to viewport and zero out velocity component on collision with border
+            var viewport = GameManager.GetGameManager().Game.GraphicsDevice.Viewport;
+            Vector2 halfSize = _rectangleCollider.shape.Size.ToVector2() / 2f;
+
+            if (positionFloat.X < halfSize.X)
+            {
+                positionFloat.X = halfSize.X;
+                if (velocity.X < 0) velocity.X = 0;
+            }
+            else if (positionFloat.X > viewport.Width - halfSize.X)
+            {
+                positionFloat.X = viewport.Width - halfSize.X;
+                if (velocity.X > 0) velocity.X = 0;
+            }
+
+            if (positionFloat.Y < halfSize.Y)
+            {
+                positionFloat.Y = halfSize.Y;
+                if (velocity.Y < 0) velocity.Y = 0;
+            }
+            else if (positionFloat.Y > viewport.Height - halfSize.Y)
+            {
+                positionFloat.Y = viewport.Height - halfSize.Y;
+                if (velocity.Y > 0) velocity.Y = 0;
+            }
+
+            // Sync collider to the float position
+            _rectangleCollider.shape.Location = (positionFloat - halfSize).ToPoint();
+
+            // Turret always aims at mouse cursor
             target = inputManager.CurrentMouseState.Position;
             Vector2 shipCenter = _rectangleCollider.shape.Center.ToVector2();
             Vector2 aimDirection = LinePieceCollider.GetDirection(GetPosition().Center, target);
@@ -90,8 +115,6 @@ namespace SpaceDefence
             if (inputManager.LeftMousePress())
             {
                 Vector2 turretOrigin = base_turret.Bounds.Size.ToVector2() / 2f;
-
-                // turret tip in world space: from ship center move along aim direction by half the turret height
                 Vector2 turretExit = shipCenter + aimDirection * (turretOrigin.Y);
 
                 if (buffTimer <= 0)
@@ -100,7 +123,6 @@ namespace SpaceDefence
                 }
                 else
                 {
-                    // Fire in turret local space and resolve to world space via the ship turret transform.
                     Vector2 localMuzzleOffset = new Vector2(0f, -turretOrigin.Y);
                     GameManager.GetGameManager().AddGameObject(new Laser(this, localMuzzleOffset, -Vector2.UnitY, 400f));
                 }
@@ -125,7 +147,6 @@ namespace SpaceDefence
             Vector2 turretOrigin = base_turret.Bounds.Size.ToVector2() / 2f;
             if (buffTimer <= 0)
             {
-                // Draw the turret centered on the ship so rotation keeps it attached
                 spriteBatch.Draw(base_turret, shipCenter, null, Color.White, turretRotation, turretOrigin, 1f, SpriteEffects.None, 0);
             }
             else
@@ -134,7 +155,6 @@ namespace SpaceDefence
             }
             base.Draw(gameTime, spriteBatch);
         }
-
 
         public void Buff()
         {
