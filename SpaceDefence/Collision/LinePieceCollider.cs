@@ -33,8 +33,7 @@ namespace SpaceDefence
         {
             get
             {
-                // TODO: Implement
-                return 0;
+                return End.Y - Start.Y;
             }
         }
 
@@ -45,8 +44,7 @@ namespace SpaceDefence
         {
             get
             {
-                // TODO: Implement
-                return 0;
+                return Start.X - End.X;
             }
         }
 
@@ -57,8 +55,7 @@ namespace SpaceDefence
         {
             get
             {
-                // TODO: Implement
-                return 0;
+                return -(StandardA * Start.X + StandardB * Start.Y);
             }
         }
 
@@ -107,8 +104,7 @@ namespace SpaceDefence
         /// <returns>true there is any overlap between the Circle and the Line.</returns>
         public override bool Intersects(LinePieceCollider other)
         {
-            // TODO Implement.
-            return false;
+            return SegmentsIntersect(this, other);
         }
 
 
@@ -117,10 +113,16 @@ namespace SpaceDefence
         /// </summary>
         /// <param name="other">The Circle to check for intersection.</param>
         /// <returns>true there is any overlap between the two Circles.</returns>
+
         public override bool Intersects(CircleCollider other)
         {
-            // TODO Implement hint, you can use the NearestPointOnLine function defined below.
-            return false;
+            // Find the nearest point on this line segment to the circle's center
+            Vector2 nearest = NearestPointOnLine(other.Center);
+
+            // If the distance from that point to the circle center is less than
+            // the radius, the line is inside or touching the circle
+            float distance = (nearest - other.Center).Length();
+            return distance <= other.Radius;
         }
 
         /// <summary>
@@ -130,7 +132,27 @@ namespace SpaceDefence
         /// <returns>true there is any overlap between the Circle and the Rectangle.</returns>
         public override bool Intersects(RectangleCollider other)
         {
-            // TODO Implement
+            // Quick check: is either endpoint inside the rectangle?
+            if (other.shape.Contains(Start.ToPoint()) || other.shape.Contains(End.ToPoint()))
+                return true;
+
+            // Build the 4 edges of the rectangle as line segments
+            Vector2 topLeft = new Vector2(other.shape.Left, other.shape.Top);
+            Vector2 topRight = new Vector2(other.shape.Right, other.shape.Top);
+            Vector2 bottomLeft = new Vector2(other.shape.Left, other.shape.Bottom);
+            Vector2 bottomRight = new Vector2(other.shape.Right, other.shape.Bottom);
+
+            LinePieceCollider topEdge = new LinePieceCollider(topLeft, topRight);
+            LinePieceCollider bottomEdge = new LinePieceCollider(bottomLeft, bottomRight);
+            LinePieceCollider leftEdge = new LinePieceCollider(topLeft, bottomLeft);
+            LinePieceCollider rightEdge = new LinePieceCollider(topRight, bottomRight);
+
+            // Check our segment against each edge using the proper two-way straddle test
+            if (SegmentsIntersect(this, topEdge)) return true;
+            if (SegmentsIntersect(this, bottomEdge)) return true;
+            if (SegmentsIntersect(this, leftEdge)) return true;
+            if (SegmentsIntersect(this, rightEdge)) return true;
+
             return false;
         }
 
@@ -141,8 +163,17 @@ namespace SpaceDefence
         /// <returns>A Vector2 with the point of intersection.</returns>
         public Vector2 GetIntersection(LinePieceCollider Other)
         {
-            // TODO Implement
-            return Vector2.Zero;
+            float a1 = StandardA, b1 = StandardB, c1 = StandardC;
+            float a2 = Other.StandardA, b2 = Other.StandardB, c2 = Other.StandardC;
+
+            // If denominator is 0 the lines are parallel and never meet
+            float denominator = a1 * b2 - a2 * b1;
+            if (denominator == 0)
+                return Vector2.Zero;
+
+            float x = (b1 * c2 - b2 * c1) / denominator;
+            float y = (a2 * c1 - a1 * c2) / denominator;
+            return new Vector2(x, y);
         }
 
         /// <summary>
@@ -150,10 +181,31 @@ namespace SpaceDefence
         /// </summary>
         /// <param name="other">The Vector you want to find the nearest point to.</param>
         /// <returns>The nearest point on the line.</returns>
+
         public Vector2 NearestPointOnLine(Vector2 other)
         {
-            // TODO Implement
-            return Vector2.Zero;
+            // The vector that runs along the line from Start to End
+            Vector2 segment = End - Start;
+
+            // The vector from Start to our query point
+            Vector2 toPoint = other - Start;
+
+            // Squared length of the segment (we use squared to avoid an extra sqrt)
+            float segLengthSquared = segment.LengthSquared();
+
+            // Degenerate case: Start and End are the same point
+            if (segLengthSquared == 0f)
+                return Start;
+
+            // t is how far along the segment the nearest point is, as a 0-to-1 fraction.
+            // Dot product gives the "shadow" of toPoint onto the segment direction.
+            float t = Vector2.Dot(toPoint, segment) / segLengthSquared;
+
+            // Clamp to [0, 1] so the nearest point stays between Start and End
+            t = Math.Clamp(t, 0f, 1f);
+
+            // The actual nearest point in world space
+            return Start + segment * t;
         }
 
         /// <summary>
@@ -176,9 +228,8 @@ namespace SpaceDefence
         /// <returns>true if the coordinates are within the circle.</returns>
         public override bool Contains(Vector2 coordinates)
         {
-            // TODO: Implement
-
-            return false;
+            Vector2 nearest = NearestPointOnLine(coordinates);
+            return (nearest - coordinates).Length() < 0.01f;
         }
 
         public bool Equals(LinePieceCollider other)
@@ -214,6 +265,28 @@ namespace SpaceDefence
         public float GetAngle()
         {
             return GetAngle(GetDirection());
+        }
+
+        // Private helpers.
+
+        private static float Side(LinePieceCollider line, Vector2 point)
+        {
+            return line.StandardA * point.X + line.StandardB * point.Y + line.StandardC;
+        }
+
+        private static bool SegmentsIntersect(LinePieceCollider a, LinePieceCollider b)
+        {
+            float sideAStart = Side(b, a.Start);
+            float sideAEnd = Side(b, a.End);
+            float sideBStart = Side(a, b.Start);
+            float sideBEnd = Side(a, b.End);
+
+            // Each pair must have opposite signs (one positive, one negative)
+            // meaning they are on opposite sides of the other segment's line
+            bool aStraddles = sideAStart * sideAEnd < 0;
+            bool bStraddles = sideBStart * sideBEnd < 0;
+
+            return aStraddles && bStraddles;
         }
     }
 }
