@@ -23,11 +23,11 @@ namespace SpaceDefence
         public float Radius;
 
         /// <summary>
-        /// Creates a new Circle object.
+        /// Creates a circle for collision detection at the given position and size.
         /// </summary>
-        /// <param name="x">The X coordinate of the circle's center</param>
-        /// <param name="y">The Y coordinate of the circle's center</param>
-        /// <param name="radius">The radius of the circle</param>
+        /// <param name="x">X position of the circle center</param>
+        /// <param name="y">Y position of the circle center</param>
+        /// <param name="radius">How big the circle is</param>
         public CircleCollider(float x, float y, float radius)
         {
             this.X = x;
@@ -36,10 +36,10 @@ namespace SpaceDefence
         }
 
         /// <summary>
-        /// Creates a new Circle object.
+        /// Creates a circle for collision detection at the given position and size.
         /// </summary>
-        /// <param name="center">The coordinates of the circle's center</param>
-        /// <param name="radius">The radius of the circle</param>
+        /// <param name="center">Center position of the circle</param>
+        /// <param name="radius">How big the circle is</param>
         public CircleCollider(Vector2 center, float radius)
         {
             this.Center = center;
@@ -48,20 +48,20 @@ namespace SpaceDefence
 
 
         /// <summary>
-        /// Gets whether or not the provided coordinates lie within the bounds of this Circle.
+        /// Checks if a point is inside this circle.
         /// </summary>
-        /// <param name="coordinates">The coordinates to check.</param>
-        /// <returns>true if the coordinates are within the circle.</returns>
+        /// <param name="coordinates">The point to test</param>
+        /// <returns>True if the point is inside the circle</returns>
         public override bool Contains(Vector2 coordinates)
         {
             return (Center - coordinates).Length() < Radius;
         }
 
         /// <summary>
-        /// Gets whether or not the Circle intersects another Circle.
+        /// Checks if this circle overlaps with another circle.
         /// </summary>
-        /// <param name="other">The Circle to check for intersection.</param>
-        /// <returns>true there is any overlap between the two Circles.</returns>
+        /// <param name="other">The other circle to test</param>
+        /// <returns>True if the circles are touching or overlapping</returns>
         public override bool Intersects(CircleCollider other)
         {
             float distance = (Center - other.Center).Length();
@@ -71,10 +71,10 @@ namespace SpaceDefence
 
 
         /// <summary>
-        /// Gets whether or not the Circle intersects the Rectangle.
+        /// Checks if this circle overlaps with a rectangle.
         /// </summary>
-        /// <param name="other">The Rectangle to check for intersection.</param>
-        /// <returns>true there is any overlap between the Circle and the Rectangle.</returns>
+        /// <param name="other">The rectangle to test</param>
+        /// <returns>True if the circle and rectangle are touching or overlapping</returns>
         public override bool Intersects(RectangleCollider other)
         {
             // Clamp the circle's center to the rectangle's edges to get the nearest point
@@ -89,10 +89,10 @@ namespace SpaceDefence
             return distanceSquared < Radius * Radius;
         }
         /// <summary>
-        /// Gets whether or not the Circle intersects the Line
+        /// Checks if this circle overlaps with a line.
         /// </summary>
-        /// <param name="other">The Line to check for intersection</param>
-        /// <returns>true there is any overlap between the Circle and the Line.</returns>
+        /// <param name="other">The line to test</param>
+        /// <returns>True if the circle and line are touching or overlapping</returns>
         public override bool Intersects(LinePieceCollider other)
         {
             // Implemented in the line code.
@@ -100,9 +100,9 @@ namespace SpaceDefence
         }
 
         /// <summary>
-        /// Get the enclosing Rectangle that surrounds the Circle.
+        /// Gets the rectangular box that fully contains this circle.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>The bounding box rectangle</returns>
         public override Rectangle GetBoundingBox()
         {
             return new Rectangle((int)(X - Radius), (int)(Y - Radius), (int)(2 * Radius), (int)(2 * Radius));

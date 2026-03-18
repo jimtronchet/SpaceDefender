@@ -12,7 +12,7 @@ namespace SpaceDefence
         public Vector2 End;
 
         /// <summary>
-        /// The length of the LinePiece, changing the length moves the end vector to adjust the length.
+        /// How long this line segment is. Setting this value stretches or shrinks the line from the Start point.
         /// </summary>
         public float Length
         {
@@ -27,7 +27,7 @@ namespace SpaceDefence
         }
 
         /// <summary>
-        /// The A component from the standard line formula Ax + By + C = 0
+        /// The A value in the line equation Ax + By + C = 0 (used for collision math).
         /// </summary>
         public float StandardA
         {
@@ -38,7 +38,7 @@ namespace SpaceDefence
         }
 
         /// <summary>
-        /// The B component from the standard line formula Ax + By + C = 0
+        /// The B value in the line equation Ax + By + C = 0 (used for collision math).
         /// </summary>
         public float StandardB
         {
@@ -49,7 +49,7 @@ namespace SpaceDefence
         }
 
         /// <summary>
-        /// The C component from the standard line formula Ax + By + C = 0
+        /// The C value in the line equation Ax + By + C = 0 (used for collision math).
         /// </summary>
         public float StandardC
         {
@@ -72,10 +72,10 @@ namespace SpaceDefence
         }
 
         /// <summary>
-        /// Should return the angle between a given direction and the up vector.
+        /// Converts a direction vector into an angle (in radians), measured from straight up.
         /// </summary>
-        /// <param name="direction">The Vector2 pointing out from (0,0) to calculate the angle to.</param>
-        /// <returns> The angle in radians between the the up vector and the direction to the cursor.</returns>
+        /// <param name="direction">The direction to measure.</param>
+        /// <returns>The angle in radians.</returns>
         public static float GetAngle(Vector2 direction)
         {
             return (float)Math.Atan2(direction.X, -direction.Y);
@@ -83,9 +83,9 @@ namespace SpaceDefence
 
 
         /// <summary>
-        /// Calculates the normalized vector pointing from point1 to point2
+        /// Finds the direction from one point to another and normalizes it (makes it length 1).
         /// </summary>
-        /// <returns> A Vector2 containing the direction from point1 to point2. </returns>
+        /// <returns>A normalized vector pointing from point1 toward point2.</returns>
         public static Vector2 GetDirection(Vector2 point1, Vector2 point2)
         {
             // Calculate the normalized vector pointing from point1 to point2
@@ -98,10 +98,10 @@ namespace SpaceDefence
 
 
         /// <summary>
-        /// Gets whether or not the Line intersects another Line
+        /// Checks if this line segment overlaps with another line segment.
         /// </summary>
-        /// <param name="other">The Line to check for intersection</param>
-        /// <returns>true there is any overlap between the Circle and the Line.</returns>
+        /// <param name="other">The line segment to check.</param>
+        /// <returns>True if they intersect, false otherwise.</returns>
         public override bool Intersects(LinePieceCollider other)
         {
             return SegmentsIntersect(this, other);
@@ -109,10 +109,10 @@ namespace SpaceDefence
 
 
         /// <summary>
-        /// Gets whether or not the line intersects a Circle.
+        /// Checks if this line segment touches or crosses a circle.
         /// </summary>
-        /// <param name="other">The Circle to check for intersection.</param>
-        /// <returns>true there is any overlap between the two Circles.</returns>
+        /// <param name="other">The circle to check.</param>
+        /// <returns>True if they overlap, false otherwise.</returns>
 
         public override bool Intersects(CircleCollider other)
         {
@@ -126,10 +126,10 @@ namespace SpaceDefence
         }
 
         /// <summary>
-        /// Gets whether or not the Line intersects the Rectangle.
+        /// Checks if this line segment overlaps with a rectangle.
         /// </summary>
-        /// <param name="other">The Rectangle to check for intersection.</param>
-        /// <returns>true there is any overlap between the Circle and the Rectangle.</returns>
+        /// <param name="other">The rectangle to check.</param>
+        /// <returns>True if they overlap, false otherwise.</returns>
         public override bool Intersects(RectangleCollider other)
         {
             // Quick check: is either endpoint inside the rectangle?
@@ -157,10 +157,10 @@ namespace SpaceDefence
         }
 
         /// <summary>
-        /// Calculates the intersection point between 2 lines.
+        /// Finds where two infinite lines cross each other (ignoring segment endpoints).
         /// </summary>
-        /// <param name="Other">The line to intersect with</param>
-        /// <returns>A Vector2 with the point of intersection.</returns>
+        /// <param name="Other">The other line to intersect with.</param>
+        /// <returns>The point where they cross, or Vector2.Zero if they're parallel.</returns>
         public Vector2 GetIntersection(LinePieceCollider Other)
         {
             float a1 = StandardA, b1 = StandardB, c1 = StandardC;
@@ -177,10 +177,10 @@ namespace SpaceDefence
         }
 
         /// <summary>
-        /// Finds the nearest point on a line to a given vector, taking into account if the line is .
+        /// Finds the closest point on this line segment to a given position.
         /// </summary>
-        /// <param name="other">The Vector you want to find the nearest point to.</param>
-        /// <returns>The nearest point on the line.</returns>
+        /// <param name="other">The position to find the nearest point to.</param>
+        /// <returns>The closest point on the line segment.</returns>
 
         public Vector2 NearestPointOnLine(Vector2 other)
         {
@@ -209,10 +209,9 @@ namespace SpaceDefence
         }
 
         /// <summary>
-        /// Returns the enclosing Axis Aligned Bounding Box containing the control points for the line.
-        /// As an unbound line has infinite length, the returned bounding box assumes the line to be bound.
+        /// Gets the smallest rectangle (axis-aligned) that completely contains this line segment.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>A bounding box rectangle.</returns>
         public override Rectangle GetBoundingBox()
         {
             Point topLeft = new Point((int)Math.Min(Start.X, End.X), (int)Math.Min(Start.Y, End.Y));
@@ -222,10 +221,10 @@ namespace SpaceDefence
 
 
         /// <summary>
-        /// Gets whether or not the provided coordinates lie on the line.
+        /// Checks if a point lies on this line segment (with small tolerance for floating point errors).
         /// </summary>
-        /// <param name="coordinates">The coordinates to check.</param>
-        /// <returns>true if the coordinates are within the circle.</returns>
+        /// <param name="coordinates">The point to check.</param>
+        /// <returns>True if the point is on the line, false otherwise.</returns>
         public override bool Contains(Vector2 coordinates)
         {
             Vector2 nearest = NearestPointOnLine(coordinates);
@@ -238,9 +237,9 @@ namespace SpaceDefence
         }
 
         /// <summary>
-        /// Calculates the normalized vector pointing from point1 to point2
+        /// Finds the normalized direction between two points.
         /// </summary>
-        /// <returns> A Vector2 containing the direction from point1 to point2. </returns>
+        /// <returns>A normalized vector pointing from point1 toward point2.</returns>
         public static Vector2 GetDirection(Point point1, Point point2)
         {
             return GetDirection(point1.ToVector2(), point2.ToVector2());
@@ -248,9 +247,9 @@ namespace SpaceDefence
 
 
         /// <summary>
-        /// Calculates the normalized vector pointing from point1 to point2
+        /// Gets the normalized direction this line segment is pointing.
         /// </summary>
-        /// <returns> A Vector2 containing the direction from point1 to point2. </returns>
+        /// <returns>A unit vector pointing from Start toward End.</returns>
         public Vector2 GetDirection()
         {
             return GetDirection(Start, End);
@@ -258,10 +257,9 @@ namespace SpaceDefence
 
 
         /// <summary>
-        /// Should return the angle between a given direction and the up vector.
+        /// Gets the angle this line segment is pointing, measured from straight up.
         /// </summary>
-        /// <param name="direction">The Vector2 pointing out from (0,0) to calculate the angle to.</param>
-        /// <returns> The angle in radians between the the up vector and the direction to the cursor.</returns>
+        /// <returns>The angle in radians.</returns>
         public float GetAngle()
         {
             return GetAngle(GetDirection());

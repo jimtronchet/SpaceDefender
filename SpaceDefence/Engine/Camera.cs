@@ -8,22 +8,22 @@ namespace SpaceDefence
   ///
   /// How it works:
   /// The camera keeps a "transform matrix" that SpriteBatch uses when drawing.
-  /// This matrix shifts everything so the player stays centred on screen.
+  /// This matrix shifts everything so the player stays centered on screen.
   /// Objects outside the visible area are still drawn — SpriteBatch skips them
   /// automatically because they fall outside the viewport after the transform.
   ///
-  /// World coordinates:  the actual position of game objects in the large level.
+  /// World coordinates: the actual position of game objects in the large level.
   /// Screen coordinates: where those objects appear on the player's monitor.
   /// </summary>
   public class Camera
   {
-    // ── World bounds ──────────────────────────────────────────────────────
-    /// <summary>Total size of the play area in world coordinates.</summary>
+    // World bounds
+    /// <summary>Total width and height of the play area in world coordinates.</summary>
     public static readonly int WorldWidth = 3840;
     public static readonly int WorldHeight = 2160;
 
-    // ── State ─────────────────────────────────────────────────────────────
-    /// <summary>The top-left corner of what the camera currently sees, in world space.</summary>
+    // Camera state
+    /// <summary>The top-left corner position of what the camera is currently showing, measured in world space.</summary>
     public Vector2 Position { get; private set; }
 
     private readonly Viewport _viewport;
@@ -35,17 +35,16 @@ namespace SpaceDefence
     }
 
     /// <summary>
-    /// Call every frame to keep the camera centred on the player.
-    /// The position is clamped so the camera never shows outside the world.
+    /// Updates the camera position each frame to keep it centered on the target.
+    /// The position is clamped so the camera never shows outside the world boundaries.
     /// </summary>
     public void Follow(Vector2 target)
     {
-      // We want the target at the centre of the screen, so the camera's
-      // top-left corner should be (target - half screen size).
+      // Center the target on screen by moving camera's top-left to (target - half screen size)
       float x = target.X - _viewport.Width / 2f;
       float y = target.Y - _viewport.Height / 2f;
 
-      // Clamp so we never scroll past the world edges
+      // Clamp to world edges so camera doesn't go past the boundaries
       x = MathHelper.Clamp(x, 0, WorldWidth - _viewport.Width);
       y = MathHelper.Clamp(y, 0, WorldHeight - _viewport.Height);
 
@@ -53,9 +52,8 @@ namespace SpaceDefence
     }
 
     /// <summary>
-    /// The transform matrix to pass to SpriteBatch.Begin().
-    /// It translates every drawn object by -Position, so the world scrolls
-    /// in the opposite direction the camera moves.
+    /// Returns the transform matrix to pass to SpriteBatch.Begin().
+    /// It moves every drawn object by the negative camera position to create the scrolling effect.
     /// </summary>
     public Matrix GetTransform()
     {
@@ -63,8 +61,8 @@ namespace SpaceDefence
     }
 
     /// <summary>
-    /// Converts a screen-space point (e.g. mouse position) into world-space.
-    /// Useful for aiming — the mouse reports screen coords but the game uses world coords.
+    /// Converts a point from screen space (like mouse position) into world space coordinates.
+    /// This is useful for aiming where the mouse is in screen coordinates but the game needs world coordinates.
     /// </summary>
     public Vector2 ScreenToWorld(Vector2 screenPosition)
     {
