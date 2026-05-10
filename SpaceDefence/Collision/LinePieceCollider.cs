@@ -132,28 +132,41 @@ namespace SpaceDefence
         /// <returns>True if they overlap, false otherwise.</returns>
         public override bool Intersects(RectangleCollider other)
         {
-            // Quick check: is either endpoint inside the rectangle?
-            if (other.shape.Contains(Start.ToPoint()) || other.shape.Contains(End.ToPoint()))
-                return true;
+            // Bereken A, B en C van de lijn formule: Ax + By + C = 0
+            float A = Start.Y - End.Y;
+            float B = End.X - Start.X;
+            float C = Start.X * End.Y - End.X * Start.Y;
 
-            // Build the 4 edges of the rectangle as line segments
-            Vector2 topLeft = new Vector2(other.shape.Left, other.shape.Top);
-            Vector2 topRight = new Vector2(other.shape.Right, other.shape.Top);
-            Vector2 bottomLeft = new Vector2(other.shape.Left, other.shape.Bottom);
-            Vector2 bottomRight = new Vector2(other.shape.Right, other.shape.Bottom);
+            // Bereken de waarde van de lijn formule voor elk hoekpunt
+            Vector2[] corners = new Vector2[]
+            {
+                new Vector2(other.shape.Left,  other.shape.Top),
+                new Vector2(other.shape.Right, other.shape.Top),
+                new Vector2(other.shape.Left,  other.shape.Bottom),
+                new Vector2(other.shape.Right, other.shape.Bottom),
+            };
 
-            LinePieceCollider topEdge = new LinePieceCollider(topLeft, topRight);
-            LinePieceCollider bottomEdge = new LinePieceCollider(bottomLeft, bottomRight);
-            LinePieceCollider leftEdge = new LinePieceCollider(topLeft, bottomLeft);
-            LinePieceCollider rightEdge = new LinePieceCollider(topRight, bottomRight);
+            // Als alle hoekpunten aan dezelfde kant liggen is er geen collision met de bounding box
+            // Minstens 1 punt aan de andere kant ligt dan is er wel een collision met de bounding box,
+            // maar we moeten ook nog controleren of de bounding box van de lijn en rectangle overlappen
+            bool anyPositive = false;
+            bool anyNegative = false;
 
-            // Check our segment against each edge using the proper two-way straddle test
-            if (SegmentsIntersect(this, topEdge)) return true;
-            if (SegmentsIntersect(this, bottomEdge)) return true;
-            if (SegmentsIntersect(this, leftEdge)) return true;
-            if (SegmentsIntersect(this, rightEdge)) return true;
 
-            return false;
+            // Controleer aan welke kant van de lijn elk hoekpunt ligt
+            foreach (Vector2 corner in corners)
+            {
+                float side = A * corner.X + B * corner.Y + C;
+                if (side > 0) anyPositive = true;
+                if (side < 0) anyNegative = true;
+            }
+
+            if (!(anyPositive && anyNegative))
+                return false; // Alle punten liggen aan dezelfde kant, dus er is geen collision
+
+            // De lijn kan alleen een collision hebben als de bounding box van de lijn en rectangle ook overlappen
+            Rectangle lineBoundingBox = GetBoundingBox();
+            return lineBoundingBox.Intersects(other.shape);
         }
 
         /// <summary>
