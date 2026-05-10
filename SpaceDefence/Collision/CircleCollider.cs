@@ -77,17 +77,34 @@ namespace SpaceDefence
         /// <returns>True if the circle and rectangle are touching or overlapping</returns>
         public override bool Intersects(RectangleCollider other)
         {
-            // Clamp the circle's center to the rectangle's edges to get the nearest point
-            float nearestX = Math.Clamp(X, other.shape.Left, other.shape.Right);
-            float nearestY = Math.Clamp(Y, other.shape.Top, other.shape.Bottom);
+            // Edge case 1: Cirkel staat naast (boven/onder of links/rechts van) de rechthoek
+            // if cy < Ab && cy > At => cx + r > Al && cx - r < Ar
+            if (Center.Y < other.shape.Bottom && Center.Y > other.shape.Top)
+                if (Center.X + Radius > other.shape.Left && Center.X - Radius < other.shape.Right)
+                    return true;
 
-            // If that nearest point is within the radius, we have an intersection
-            float distanceX = X - nearestX;
-            float distanceY = Y - nearestY;
-            float distanceSquared = distanceX * distanceX + distanceY * distanceY;
+            // if cx < Ar && cx > Al => cy + r > At && cy - r < Ab
+            if (Center.X < other.shape.Right && Center.X > other.shape.Left)
+                if (Center.Y + Radius > other.shape.Top && Center.Y - Radius < other.shape.Bottom)
+                    return true;
 
-            return distanceSquared < Radius * Radius;
+            // Edge case 2: Cirkel staat diagonaal
+            // kijk of de hoeken van rectangle in de cirkel vallen
+            Vector2[] corners = new Vector2[]
+            {
+                new Vector2(other.shape.Left,  other.shape.Top),
+                new Vector2(other.shape.Right, other.shape.Top),
+                new Vector2(other.shape.Left,  other.shape.Bottom),
+                new Vector2(other.shape.Right, other.shape.Bottom),
+            };
+
+            foreach (Vector2 corner in corners)
+                if ((corner - Center).Length() < Radius)
+                    return true; // als een hoek in de cirkel valt, dan is er een overlap
+
+            return false;
         }
+
         /// <summary>
         /// Checks if this circle overlaps with a line.
         /// </summary>
